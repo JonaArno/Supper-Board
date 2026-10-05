@@ -81,6 +81,9 @@ guides/
   setup.md                       Build your own, step by step
   data-model.md                  Every collection and field the page uses
   kitchen-tablet.md              Tablet picks, Fire/Silk notes, kiosk mode, mounting
+  railway-supabase.md            Host it on Railway with Supabase instead of a Claude artifact
+server/                          Node server + Supabase adapter for the Railway setup
+supabase/migrations/             Database schema for the Railway setup
 docs/                            Standalone demo (GitHub Pages) + screenshots
 tools/build_demo.py              Rebuilds docs/index.html from board/
 ```
