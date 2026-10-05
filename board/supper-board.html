@@ -281,8 +281,8 @@ h2{font-size:1.15rem;font-weight:700}
       <div id="nextList"></div>
     </div>
     <div class="section" id="planGroWrap" hidden>
-      <div class="section-head"><h2>Next plan's groceries</h2><span class="count" id="planGroRange"></span></div>
-      <p class="muted" style="margin:0;font-size:.92rem">Thursday evening Claude combines these with the next-order list above into one list for Muse.</p>
+      <div class="section-head"><h2 id="planGroTitle">Next plan's groceries</h2><span class="count" id="planGroRange"></span></div>
+      <p class="muted" style="margin:0;font-size:.92rem" id="planGroLead">Thursday evening Claude combines these with the next-order list above into one list for Muse.</p>
       <div><button type="button" class="btn small ghost" data-act="copy">Copy full order list</button></div>
       <div id="planGroDyn" class="stack"></div>
     </div>
@@ -581,6 +581,9 @@ h2{font-size:1.15rem;font-weight:700}
     const d = S.dplan;
     $("planGroWrap").hidden = !(d && d.groceries && d.groceries.length);
     if(d && d.groceries){
+      const forCurrent = !S.draft.length;
+      $("planGroTitle").textContent = forCurrent ? "Groceries for this plan" : "Next plan's groceries";
+      $("planGroLead").textContent = forCurrent ? "Everything the current two-week plan needs. Copy it into your shopping app or notes." : "Thursday evening Claude combines these with the next-order list above into one list for Muse.";
       $("planGroRange").textContent = d.start && d.end ? fmt(d.start,{month:"short",day:"numeric"})+" – "+fmt(d.end,{month:"short",day:"numeric"}) : "";
       $("planGroDyn").innerHTML = d.groceries.map(g=>'<div class="gro"><span class="eyebrow">'+esc(g.section||"Groceries")+'</span><ul>'+(g.items||[]).map(i=>'<li>'+esc(i)+'</li>').join("")+'</ul></div>').join("");
     }
