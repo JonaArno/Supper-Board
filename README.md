@@ -4,7 +4,7 @@ A shared kitchen board for a two-person household. It shows what's for dinner to
 
 I'm not a developer. I built all of this in an afternoon by talking to Claude: the page, the automation, and the tablet setup. This repo has everything you need to build your own.
 
-**[Try the demo →](https://YOUR-USERNAME.github.io/supper-board/)**: sample data, runs in your browser, nothing to install.
+**[Try the demo →](https://weezerhunter.github.io/Supper-Board/#today)**: sample data, runs in your browser, nothing to install.
 
 <p>
   <img src="docs/screenshots/phone-tonight.png" width="230" alt="Tonight screen on a phone: tonight's meal, push-back buttons, thaw reminder, and a rating prompt">
