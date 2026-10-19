@@ -281,8 +281,8 @@ h2{font-size:1.15rem;font-weight:700}
       <div id="nextList"></div>
     </div>
     <div class="section" id="planGroWrap" hidden>
-      <div class="section-head"><h2>Next plan's groceries</h2><span class="count" id="planGroRange"></span></div>
-      <p class="muted" style="margin:0;font-size:.92rem">Thursday evening Claude combines these with the next-order list above into one list for Muse.</p>
+      <div class="section-head"><h2 id="planGroTitle">Next plan's groceries</h2><span class="count" id="planGroRange"></span></div>
+      <p class="muted" style="margin:0;font-size:.92rem" id="planGroLead">Thursday evening Claude combines these with the next-order list above into one list for Muse.</p>
       <div><button type="button" class="btn small ghost" data-act="copy">Copy full order list</button></div>
       <div id="planGroDyn" class="stack"></div>
     </div>
@@ -295,7 +295,7 @@ h2{font-size:1.15rem;font-weight:700}
       <div class="section-head"><h2>In the freezer</h2></div>
       <div id="freezerDyn"></div>
       <form class="addform" id="freezerForm" autocomplete="off">
-        <input id="addFreezer" type="text" placeholder="e.g. chicken thighs, about 2 lb" aria-label="Item added to the freezer">
+        <input id="addFreezer" type="text" placeholder="e.g. chicken thighs, about 500 g" aria-label="Item added to the freezer">
         <button class="btn ghost" type="submit">Add</button>
       </form>
     </div>
@@ -380,7 +380,7 @@ h2{font-size:1.15rem;font-weight:700}
 <script>
 (function(){
   const S = {meals:[],draft:[],history:[],notes:[],grocery:[],staples:[],freezer:[],ideas:[],plan:null,dplan:null,loaded:{}};
-  const checked = new Set(); let wakeLock = null;
+  const checked = new Set(); let wakeLock = null, wantAwake = false;
   let db = null, dbState = "pending", readOnly = false, tab = "today", openId = null;
   const $ = id => document.getElementById(id);
   const pad = n => String(n).padStart(2,"0");
@@ -581,6 +581,9 @@ h2{font-size:1.15rem;font-weight:700}
     const d = S.dplan;
     $("planGroWrap").hidden = !(d && d.groceries && d.groceries.length);
     if(d && d.groceries){
+      const forCurrent = !S.draft.length;
+      $("planGroTitle").textContent = forCurrent ? "Groceries for this plan" : "Next plan's groceries";
+      $("planGroLead").textContent = forCurrent ? "Everything the current two-week plan needs. Copy it into your shopping app or notes." : "Thursday evening Claude combines these with the next-order list above into one list for Muse.";
       $("planGroRange").textContent = d.start && d.end ? fmt(d.start,{month:"short",day:"numeric"})+" – "+fmt(d.end,{month:"short",day:"numeric"}) : "";
       $("planGroDyn").innerHTML = d.groceries.map(g=>'<div class="gro"><span class="eyebrow">'+esc(g.section||"Groceries")+'</span><ul>'+(g.items||[]).map(i=>'<li>'+esc(i)+'</li>').join("")+'</ul></div>').join("");
     }
@@ -684,19 +687,29 @@ h2{font-size:1.15rem;font-weight:700}
   document.addEventListener("fullscreenchange", onFsChange);
   document.addEventListener("webkitfullscreenchange", onFsChange);
   document.addEventListener("visibilitychange", async ()=>{
-    if(document.visibilityState==="visible" && fsEl() && !fsLock){
+    if(document.visibilityState==="hidden"){ saveUi(); return; }
+    if(fsEl() && !fsLock){
       try{ fsLock = await navigator.wakeLock.request("screen"); }catch(e){}
     }
+    // The browser drops the wake lock whenever the screen locks; take it back.
+    if(wantAwake && !wakeLock) acquireAwake(true);
   });
+  window.addEventListener("pagehide", ()=>saveUi());
 
-  async function toggleAwake(){
-    if(wakeLock){ try{ await wakeLock.release(); }catch(e){} wakeLock = null; if(openId) renderSheet(); return; }
+  async function acquireAwake(quiet){
     try{
       wakeLock = await navigator.wakeLock.request("screen");
       wakeLock.addEventListener("release", ()=>{ wakeLock = null; if(openId) renderSheet(); });
-      toast("The screen will stay on while this page is open");
-    }catch(e){ wakeLock = null; toast("This device won't keep the screen on from here. Turn off auto-lock in its settings instead."); }
+      if(!quiet) toast("The screen will stay on while this page is open");
+    }catch(e){
+      wakeLock = null;
+      if(!quiet){ wantAwake = false; toast("This device won't keep the screen on from here. Turn off auto-lock in its settings instead."); }
+    }
     if(openId) renderSheet();
+  }
+  async function toggleAwake(){
+    if(wakeLock){ wantAwake = false; saveUi(); try{ await wakeLock.release(); }catch(e){} wakeLock = null; if(openId) renderSheet(); return; }
+    wantAwake = true; await acquireAwake(false); saveUi();
   }
 
   function renderSheet(){
@@ -727,6 +740,7 @@ h2{font-size:1.15rem;font-weight:700}
 
   function render(){
     renderHeader(); renderToday(); renderPlan(); renderShop(); renderFeedback();
+    if(pendingOpen) restoreSheet();
     if(openId) renderSheet();
   }
 
@@ -736,9 +750,35 @@ h2{font-size:1.15rem;font-weight:700}
     document.querySelectorAll(".nav button").forEach(b=>{ if(b.dataset.tab===t) b.setAttribute("aria-current","page"); else b.removeAttribute("aria-current"); });
     renderHeader(); window.scrollTo(0,0);
     try{ history.replaceState(null,"","#"+t); }catch(e){}
+    saveUi();
   }
-  function openSheet(id){ openId = id; $("scrim").hidden = false; $("sheet").hidden = false; $("noteInput").value = ""; renderSheet(); $("sheet").scrollTop = 0; }
-  function closeSheet(){ openId = null; $("scrim").hidden = true; $("sheet").hidden = true; }
+  function openSheet(id){ openId = id; $("scrim").hidden = false; $("sheet").hidden = false; $("noteInput").value = ""; renderSheet(); $("sheet").scrollTop = 0; saveUi(); }
+  function closeSheet(){ openId = null; $("scrim").hidden = true; $("sheet").hidden = true; saveUi(); }
+
+  // Phones often reload the page after the screen turns off. Remember the open
+  // recipe, its ticks and scroll position on this device so cooking picks up
+  // where it left off.
+  const UI_KEY = "supper-board-ui", UI_MAX_AGE = 12*36e5;
+  let pendingOpen = null, pendingScroll = 0, uiSaveT;
+  function saveUi(){
+    try{
+      localStorage.setItem(UI_KEY, JSON.stringify({at:Date.now(), tab, openId: openId || pendingOpen,
+        sheetScroll: openId ? $("sheet").scrollTop : pendingScroll, checked:[...checked], wantAwake}));
+    }catch(e){}
+  }
+  function saveUiSoon(){ clearTimeout(uiSaveT); uiSaveT = setTimeout(saveUi, 300); }
+  function loadUi(){
+    try{ const s = JSON.parse(localStorage.getItem(UI_KEY) || "null"); return s && Date.now()-s.at < UI_MAX_AGE ? s : null; }catch(e){ return null; }
+  }
+  // Reopen only once every collection a meal can live in has loaded, or the sheet would close itself.
+  function restoreSheet(){
+    if(!["meals","draft","history"].every(c=>S.loaded[c])) return;
+    const id = pendingOpen; pendingOpen = null;
+    if(!findMeal(id)) return;
+    openSheet(id);
+    $("sheet").scrollTop = pendingScroll;
+  }
+  $("sheet").addEventListener("scroll", saveUiSoon, {passive:true});
 
   let toastT;
   let toastUndo = null;
@@ -778,7 +818,7 @@ h2{font-size:1.15rem;font-weight:700}
     else if(act==="closeCopy"){ $("copyScrim").hidden = true; $("copySheet").hidden = true; }
     else if(act==="push") pushBack(id, +b.dataset.n);
     else if(act==="undo"){ const fn = toastUndo; toastUndo = null; $("toast").hidden = true; if(fn) fn(); }
-    else if(act==="tick"){ const k = b.dataset.k; if(checked.has(k)) checked.delete(k); else checked.add(k); renderSheet(); }
+    else if(act==="tick"){ const k = b.dataset.k; if(checked.has(k)) checked.delete(k); else checked.add(k); renderSheet(); saveUi(); }
     else if(act==="rate"){ const m = findMeal(id); if(!m) return; const v = +b.dataset.v; save(()=>mref(m).update({rating: m.rating===v ? 0 : v}), "Rating saved"); }
     else if(act==="thaw"){ const m = findMeal(id); if(m) save(()=>mref(m).update({thawDone:true}), "Marked as thawing"); }
     else if(act==="swapout"){ const m = findMeal(id); if(m) save(()=>mref(m).update({swapOut: !m.swapOut}), m.swapOut ? "Keeping it" : "Marked to replace"); }
@@ -819,8 +859,14 @@ h2{font-size:1.15rem;font-weight:700}
     if(await save(()=>db.collection("freezer").add({name, at:new Date().toISOString()}), "Added to the freezer list")) $("addFreezer").value = "";
   });
 
-  const h0 = (location.hash||"").slice(1);
-  setTab(["today","plan","shop","feedback"].includes(h0) ? h0 : "today");
+  const TABS = ["today","plan","shop","feedback"], ui0 = loadUi(), h0 = (location.hash||"").slice(1);
+  if(ui0){
+    (ui0.checked||[]).forEach(k=>checked.add(k));
+    pendingOpen = ui0.openId || null; pendingScroll = ui0.sheetScroll || 0;
+    wantAwake = !!ui0.wantAwake;
+  }
+  setTab(TABS.includes(h0) ? h0 : (ui0 && TABS.includes(ui0.tab) ? ui0.tab : "today"));
+  if(wantAwake && document.visibilityState==="visible") acquireAwake(true);
   render();
 
   // Re-render at midnight so "tonight" rolls over on a wall display.

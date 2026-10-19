@@ -51,7 +51,7 @@ STEP 1: IS A LIST DUE?
 Read plan/current and plan/draft. Continue only if plan/current.status is "drafted" or "approved" and plan/draft exists with a pickup Sunday within the next 4 days ([TIME_ZONE]). Otherwise stop with one line saying nothing is due. If the status is "drafted" (never approved), continue anyway and mention "Not approved yet" in the statusNote.
 
 STEP 2: FINALIZE THE PLAN
-For each draft meal with swapOut true, replace it: read its notes and the requests in `ideas`, then write a different meal of the same kind on the same date following plan/current.guidelines, with a full recipe in the same shape (safe temperatures: poultry 165°F, fish 145°F). Set swapOut false and update the title of its leftovers night. Then update plan/draft.groceries to match the final recipes.
+For each draft meal with swapOut true, replace it: read its notes and the requests in `ideas`, then write a different meal of the same kind on the same date following plan/current.guidelines, with a full recipe in the same shape in metric units only (grams, millilitres, °C; no pounds, ounces, cups or °F; safe temperatures: poultry 75°C, fish 63°C). Set swapOut false and update the title of its leftovers night. Then update plan/draft.groceries to match the final recipes.
 
 STEP 3: BUILD THE ORDER LIST
 Combine plan/draft.groceries, every `grocery` doc, and every staple with status "low". Merge duplicates and use store-friendly quantities. Record the ids of the grocery docs and low staples you included.

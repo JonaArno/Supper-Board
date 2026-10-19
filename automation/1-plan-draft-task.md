@@ -69,11 +69,12 @@ STEP 4: WRITE THE PLAN (newStart through newEnd = pickup + 14 days)
 - Learn from feedback: bring back meals rated 4-5 (at most two repeats per plan, applying any note tweaks), never repeat meals rated 1-2, act on every request in `ideas`, and use what's already in `freezer` first.
 - Week 1 uses fresh proteins. Week 2 proteins are bought on pickup day and frozen on arrival: give each week-2 meal that uses one a `thaw` field.
 - Vary proteins and keep weeknight recipes under about 45 minutes.
-- Write an original recipe for every cook night and every flex night with a specific dish: serves, time, oven if used, ingredients with amounts, numbered steps with safe internal temperatures (poultry 165°F, fish 145°F), and a short storage tip.
+- Write an original recipe for every cook night and every flex night with a specific dish: serves, time, oven if used, ingredients with amounts, numbered steps with safe internal temperatures (poultry 75°C, fish 63°C), and a short storage tip.
+- Use metric units only: grams, kilograms, millilitres, litres, °C (give the fan-oven temperature too), and centimetres. Teaspoons and tablespoons are fine for small amounts. Never use pounds, ounces, cups, inches or °F.
 - Leftover nights: title "Leftover <dish>", `from` = the cook meal id.
 
 STEP 5: GROCERY LIST
-Build it from the recipes. Leave out staples marked "have" and freezer items the plan uses. Use store-friendly quantities. Sections: "Proteins, use fresh (week 1)", "Proteins, freeze on arrival (week 2)", "Produce", "Dairy and eggs", "Pantry", "Snacks". Always restock: [ALWAYS_RESTOCK]. Don't duplicate items in `grocery` or staples marked "low"; the Thursday task adds those.
+Build it from the recipes. Leave out staples marked "have" and freezer items the plan uses. Use store-friendly metric quantities (grams, kilograms, millilitres, litres, or counts). Sections: "Proteins, use fresh (week 1)", "Proteins, freeze on arrival (week 2)", "Produce", "Dairy and eggs", "Pantry", "Snacks". Always restock: [ALWAYS_RESTOCK]. Don't duplicate items in `grocery` or staples marked "low"; the Thursday task adds those.
 
 STEP 6: SAVE
 - Draft doc ids: "p" + newStart as YYYYMMDD + "-" + two-digit day number (e.g. p20261012-01).

@@ -15,7 +15,7 @@ One document per night.
 | `details` | string | One line under the title |
 | `recipe` | object | `{serves, time, oven?, ingredients: [], steps: [], tip}` |
 | `from` | string | Leftover nights only: the id of the cook meal, which links to its recipe |
-| `thaw` | string | Optional. What to move from freezer to fridge **the night before**, e.g. "the chicken breast (about 2 lb)" |
+| `thaw` | string | Optional. What to move from freezer to fridge **the night before**, e.g. "the chicken breast (about 900 g)" |
 | `thawDone` | bool | Set when someone taps "Done, it's in the fridge" |
 | `rating` | 0–5 | Set from the stars |
 | `swapOut` | bool | Draft meals only: "Replace this meal" |
