@@ -402,11 +402,14 @@ h2{font-size:1.15rem;font-weight:700}
   const mref = m => db.doc((m._col||"meals")+"/"+m.id);
   const status = () => (S.plan && S.plan.status) || "active";
   const proposed = m => m && m._col==="draft" && status()==="drafted";
-  const weekOf = (k,start) => Math.floor((dateOf(k)-dateOf(start))/864e5/7);
+  // Whole days between dates (rounded, so a daylight-saving change doesn't shift a day into the wrong week).
+  const weekOf = (k,start) => Math.floor(Math.round((dateOf(k)-dateOf(start))/864e5)/7);
+  // Weeks always run Monday to Sunday, whatever day a plan starts on.
+  const mondayOf = k => addDays(k, -((dateOf(k).getDay()+6)%7));
   function cookNo(m){
     if(m.kind!=="cook" || m._col==="history") return "";
     const src = (m._col==="draft"?S.draft:S.meals).slice().sort(byDate); if(!src.length) return "";
-    const st = src[0].date, w = weekOf(m.date,st);
+    const st = mondayOf(src[0].date), w = weekOf(m.date,st);
     const list = src.filter(x=>x.kind==="cook" && weekOf(x.date,st)===w);
     return (list.findIndex(x=>x.id===m.id)+1)+" of "+list.length;
   }
@@ -532,8 +535,8 @@ h2{font-size:1.15rem;font-weight:700}
   }
 
   function blockHtml(list, label, t, first){
-    const weeks = {}, st = list[0].date;
-    for(let k = st; k <= list[list.length-1].date; k = addDays(k,1)){
+    const weeks = {}, st = mondayOf(list[0].date);
+    for(let k = list[0].date; k <= list[list.length-1].date; k = addDays(k,1)){
       const w = weekOf(k,st), on = list.filter(m=>m.date===k);
       weeks[w] = weeks[w] || {first:k,last:k,rows:[]}; weeks[w].last = k;
       if(on.length) on.forEach(m=>weeks[w].rows.push(dayRow(m,t)));
