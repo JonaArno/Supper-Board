@@ -373,7 +373,7 @@ h2{font-size:1.15rem;font-weight:700}
 <div class="sheet" id="copySheet" role="dialog" aria-modal="true" aria-labelledby="copyTitle" hidden>
   <div class="grab"></div>
   <div class="head" style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px"><h2 id="copyTitle">Copy the order list</h2><button type="button" class="iconbtn" data-act="closeCopy" aria-label="Close"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></button></div>
-  <p class="muted" style="font-size:.92rem;margin:8px 0">This device didn't allow automatic copying. The list is selected below; use your device's Copy, then paste it into Muse.</p>
+  <p class="muted" style="font-size:.92rem;margin:8px 0" id="copyHelp">This device didn't allow automatic copying. The list is selected below; use your device's Copy, then paste it into Muse.</p>
   <textarea id="copyBox" class="copybox" readonly aria-label="Order list"></textarea>
 </div>
 
@@ -642,13 +642,31 @@ h2{font-size:1.15rem;font-weight:700}
     if(extra.length){ lines.push("Also add"); extra.forEach(i=>lines.push("- "+i.text)); lines.push(""); }
     return lines.join("\n").trim();
   }
+  // Copy to the clipboard; if the device refuses, show the text selected so it can be copied by hand.
+  function copyText(text, done, title, help){
+    const fallback = ()=>{
+      $("copyTitle").textContent = title; $("copyHelp").textContent = help;
+      $("copyBox").value = text; $("copyScrim").hidden = false; $("copySheet").hidden = false;
+      setTimeout(()=>{ $("copyBox").focus(); $("copyBox").select(); },50);
+    };
+    try{ navigator.clipboard.writeText(text).then(()=>toast(done), fallback); }catch(e){ fallback(); }
+  }
   function copyOrder(){
     const text = orderText();
     if(!text || text.split("\n").length<3){ toast("There's no order list yet. It appears once the next plan is drafted."); return; }
-    const fallback = ()=>{ $("copyBox").value = text; $("copyScrim").hidden = false; $("copySheet").hidden = false; setTimeout(()=>{ $("copyBox").focus(); $("copyBox").select(); },50); };
-    try{
-      navigator.clipboard.writeText(text).then(()=>toast("List copied. Paste it into Muse."), fallback);
-    }catch(e){ fallback(); }
+    copyText(text, "List copied. Paste it into Muse.", "Copy the order list",
+      "This device didn't allow automatic copying. The list is selected below; use your device's Copy, then paste it into Muse.");
+  }
+  // One ingredient per line and nothing else, so pasting into a list app
+  // such as Apple Reminders makes one item per line.
+  function copyIngredients(id){
+    const m = findMeal(id); if(!m || !m.recipe) return;
+    const lines = (m.recipe.ingredients||[]).map(x=>{
+      const meat = x.match(/^Meat add-on( \(optional\))?:\s*(.+)$/i);
+      return (meat ? meat[2]+(meat[1] ? " (meat, optional)" : " (meat)") : x).replace(/\s+/g," ").trim();
+    }).filter(Boolean);
+    copyText(lines.join("\n"), "Ingredients copied. Paste them into your shopping list.", "Copy the ingredients",
+      "This device didn't allow automatic copying. The ingredients are selected below; use your device's Copy, then paste them into your list.");
   }
 
   function recipeHtml(m){
@@ -656,7 +674,8 @@ h2{font-size:1.15rem;font-weight:700}
     const fx = [r.serves?"Serves "+r.serves:"", r.time||"", r.oven?"Oven "+r.oven:""].filter(Boolean);
     let h = '<div class="recipe"><div class="section-head"><h2>Recipe</h2><button type="button" class="btn small ghost" data-act="awake" aria-pressed="'+(!!wakeLock)+'">'+(wakeLock?"Screen stays on":"Keep screen on")+'</button></div>';
     if(fx.length) h += '<div class="rfacts">'+fx.map(f=>'<span class="fact">'+esc(f)+'</span>').join("")+'</div>';
-    h += '<span class="eyebrow">Ingredients · tap as you go</span><ul class="ing">'+(r.ingredients||[]).map((x,i)=>{ const k = m.id+":i"+i, on = checked.has(k);
+    h += '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap"><span class="eyebrow">Ingredients · tap as you go</span>'+
+      '<button type="button" class="btn small ghost" data-act="copyIng" data-id="'+esc(m.id)+'">Copy for shopping list</button></div><ul class="ing">'+(r.ingredients||[]).map((x,i)=>{ const k = m.id+":i"+i, on = checked.has(k);
       return '<li><button type="button" data-act="tick" data-k="'+esc(k)+'" aria-pressed="'+on+'" class="'+(on?"on":"")+'"><span class="box" aria-hidden="true">'+(on?"✓":"")+'</span><span class="lbl">'+esc(x)+'</span></button></li>'; }).join("")+'</ul>';
     h += '<span class="eyebrow" style="margin-top:8px">Steps</span><ol class="steps">'+(r.steps||[]).map((x,i)=>{ const k = m.id+":s"+i, on = checked.has(k);
       return '<li><button type="button" data-act="tick" data-k="'+esc(k)+'" aria-pressed="'+on+'" class="'+(on?"on":"")+'"><span class="num">'+(i+1)+'</span><span>'+esc(x)+'</span></button></li>'; }).join("")+'</ol>';
@@ -818,6 +837,7 @@ h2{font-size:1.15rem;font-weight:700}
     else if(act==="awake") toggleAwake();
     else if(act==="fullscreen") toggleFullscreen();
     else if(act==="copy") copyOrder();
+    else if(act==="copyIng") copyIngredients(id);
     else if(act==="closeCopy"){ $("copyScrim").hidden = true; $("copySheet").hidden = true; }
     else if(act==="push") pushBack(id, +b.dataset.n);
     else if(act==="undo"){ const fn = toastUndo; toastUndo = null; $("toast").hidden = true; if(fn) fn(); }
